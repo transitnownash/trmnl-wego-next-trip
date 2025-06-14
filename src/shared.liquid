@@ -152,12 +152,12 @@
   /**
    * Create Route Line
    */
-  const createRouteLine = (shape, color) => {
+  const createRouteLine = (shape, color, weight) => {
     const formattedShapePoints = shape.points.map((s) => {
       return [s.lat, s.lon];
     })
 
-    return L.polyline(formattedShapePoints, {smooth: true, color, weight: 8});
+    return L.polyline(formattedShapePoints, { smooth: true, color, weight });
   }
 
   /**
@@ -302,15 +302,18 @@
         center: [36.1627, -86.7816], // Nashville
         zoom: 12,
         zoomControl: false,
-        attributionControl: true
+        attributionControl: false
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
+      L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.{ext}', {
+	        attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19,
+          ext: 'png',
         }).addTo(window.transitMap);
 
       // Add trip route to map
-      const routeShape = createRouteLine(nextTrip.shape, `#${nextRoute.route_color}`);
+      const routeShapeOutline = createRouteLine(nextTrip.shape, `#ffffff`, 16);
+      const routeShape = createRouteLine(nextTrip.shape, `#${nextRoute.route_color}`, 8);
+      routeShapeOutline.addTo(window.transitMap);
       routeShape.addTo(window.transitMap);
       window.transitMap.fitBounds(routeShape.getBounds());
 
