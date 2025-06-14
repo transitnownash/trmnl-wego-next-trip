@@ -12,7 +12,7 @@ custom_fields:
   name: About This Plugin
   field_type: author_bio
   description: Displays the next bus or train for a given stop in Nashville, Tennessee. Find the code using the linked map.
-  github_url: https://github.com/stephenyeargin/trmnl-dashboard
+  github_url: https://github.com/transitnownash/trmnl-wego-next-trip
   learn_more_url: https://map.transitnownash.org/
   email_address: stephen@yearg.in
 - keyname: stop_id
