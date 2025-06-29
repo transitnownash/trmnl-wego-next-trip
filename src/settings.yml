@@ -4,7 +4,13 @@ no_screen_padding: 'no'
 dark_mode: 'no'
 static_data: ''
 polling_verb: get
-polling_url: "https://gtfs.transitnownash.org/stops/{{ stop_id }}.json\r\nhttps://gtfs.transitnownash.org/stops/{{ stop_id }}/trips.json?per_page=200\r\nhttps://gtfs.transitnownash.org/routes.json\r\nhttps://gtfs.transitnownash.org/realtime/vehicle_positions.json\r\nhttps://gtfs.transitnownash.org/realtime/trip_updates.json\r\nhttps://gtfs.transitnownash.org/realtime/alerts.json\r\n"
+polling_url: |
+  https://gtfs.transitnownash.org/stops/{{ wego_stop_id }}.json
+  https://gtfs.transitnownash.org/stops/{{ wego_stop_id }}/trips.json?per_page=200
+  https://gtfs.transitnownash.org/routes.json
+  https://gtfs.transitnownash.org/realtime/vehicle_positions.json
+  https://gtfs.transitnownash.org/realtime/trip_updates.json
+  https://gtfs.transitnownash.org/realtime/alerts.json
 polling_headers: ''
 id: 91940
 custom_fields:
@@ -15,10 +21,18 @@ custom_fields:
   github_url: https://github.com/transitnownash/trmnl-wego-next-trip
   learn_more_url: https://map.transitnownash.org/
   email_address: stephen@yearg.in
-- keyname: stop_id
+- keyname: wego_stop_id
   field_type: string
   name: Stop ID
   description: The code for the stop to monitor
   placeholder: PORGRESF
+- keyname: wego_display
+  field_type: select
+  name: Display
+  description: Select a view, defaults to selected stop
+  options:
+    Next Trip for Stop: next_trip_at_stop
+    System Alerts: alerts
+  default: next_trip_at_stop
 name: WeGo Public Transit
 refresh_interval: 15

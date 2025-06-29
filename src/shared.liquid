@@ -1,15 +1,35 @@
 {% comment %} https://gtfs.transitnownash.org/stops/{{ stop_id }}.json {% endcomment %}
 {% assign stop = IDX_0 %}
 {% comment %} https://gtfs.transitnownash.org/stops/{{ stop_id }}/trips.json?per_page=200 {% endcomment %}
-{% assign trips = IDX_1 %}
+{% assign trips = IDX_1.data %}
 {% comment %} https://gtfs.transitnownash.org/routes.json {% endcomment %}
-{% assign routes = IDX_2 %}
+{% assign routes = IDX_2.data %}
 {% comment %} https://gtfs.transitnownash.org/realtime/vehicle_positions.json {% endcomment %}
-{% assign vehicle_positions = IDX_3 %}
+{% assign vehicle_positions = IDX_3.data %}
 {% comment %} https://gtfs.transitnownash.org/realtime/trip_updates.json {% endcomment %}
-{% assign trip_updates = IDX_4 %}
+{% assign trip_updates = IDX_4.data %}
 {% comment %} https://gtfs.transitnownash.org/realtime/alerts.json {% endcomment %}
-{% assign alerts = IDX_5 %}
+{% assign alerts = IDX_5.data %}
+
+{% template alert %}
+<div class="item gap--small ">
+  <div class="title text--white bg--black text--center w--10 flex--center-y">
+    <span class="text--white">{{ alert.alert.informed_entity.first.route_id }}</span>
+  </div>
+  <div class="content">
+    <div><span class="label label--small">{{ alert.alert.header_text.translation.first.text }}</span></div>
+    <div class="flex gap--small">
+      <span class="label label--small label--outline">{{ alert.alert.cause }}, {{ alert.alert.effect }}</span>
+      {% if alert.alert.active_period.first.end < 32503701600 %}
+      <span class="label label--small label--outline">{{ alert.alert.active_period.first.start | date: '%-m/%-d' }} thru {{ alert.alert.active_period.first.end | date: '%-m/%-d' }}</span>
+      {% else %}
+      <span class="label label--small label--outline">Start: {{ alert.alert.active_period.first.start | date: '%-m/%-d' }}</span>
+      {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+{% endtemplate %}
 
 <link
   rel="stylesheet"
@@ -187,7 +207,7 @@
           effectiveTime.isAfter(BASE_NOW) &&
           String(trip.trip_gid) !== String(excludeTripGid)
         ) {
-          const route = ROUTES.data.find((r) => r.route_gid === trip.route_gid);
+          const route = ROUTES.find((r) => r.route_gid === trip.route_gid);
           departures.push({ trip, route, scheduled, updated, effectiveTime });
         }
       });
@@ -255,8 +275,8 @@
     const departsContainer = document.getElementById('departs');
     const futureContainer = document.getElementById('future');
 
-    const nextTrip = findNextTrip(TRIPS.data);
-    const nextRoute = ROUTES.data.find((r) => r.route_gid === nextTrip?.route_gid) || {};
+    const nextTrip = findNextTrip(TRIPS);
+    const nextRoute = ROUTES.find((r) => r.route_gid === nextTrip?.route_gid) || {};
     if (!nextTrip) {
       nextTripContainer.innerHTML = 'No more trips for today';
       routeContainer.innerHTML = '';
@@ -264,7 +284,7 @@
       return;
     }
     const scheduledStopTime = findNextDepartureTime(nextTrip.stop_times);
-    const updatedStopTime = findUpdatedNextDepartureTime(nextTrip, STOP, TRIP_UPDATES.data);
+    const updatedStopTime = findUpdatedNextDepartureTime(nextTrip, STOP, TRIP_UPDATES);
 
     nextTripContainer.innerHTML = nextTrip.trip_headsign || 'No more trips for today';
     routeContainer.innerHTML = `${nextRoute.route_short_name || ''} - ${nextRoute.route_long_name || ''}`;
@@ -277,7 +297,7 @@
     `;
 
     // Show next two upcoming departures after the current next trip
-    const upcoming = getUpcomingDeparturesForStop(TRIPS.data, STOP, TRIP_UPDATES.data, nextTrip.trip_gid, 2);
+    const upcoming = getUpcomingDeparturesForStop(TRIPS, STOP, TRIP_UPDATES, nextTrip.trip_gid, 2);
     if (upcoming.length > 0 && futureContainer) {
       futureContainer.innerHTML = `
         <div class="item">
@@ -290,7 +310,7 @@
     }
 
     // Process and display only one alert
-    processAlerts(ALERTS.data, nextRoute.route_gid, STOP.stop_gid);
+    processAlerts(ALERTS, nextRoute.route_gid, STOP.stop_gid);
 
     const mapContainer = document.getElementById('wego-map-canvas');
     if (mapContainer) {
@@ -327,7 +347,7 @@
       }).addTo(window.transitMap);
 
       // Add vehicle marker to map, if found
-      const vehicle = VEHICLE_POSITIONS.data.find((vp) => vp.vehicle?.trip?.trip_id === nextTrip.trip_gid);
+      const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === nextTrip.trip_gid);
       if (vehicle) {
         L.marker([parseFloat(vehicle.vehicle.position.latitude), parseFloat(vehicle.vehicle.position.longitude)], {
             icon: L.icon({
