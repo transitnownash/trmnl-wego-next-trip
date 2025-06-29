@@ -31,8 +31,8 @@ custom_fields:
   name: Display
   description: Select a view, defaults to selected stop
   options:
-    Next Trip for Stop: next_trip_at_stop
-    System Alerts: alerts
+  - Next Trip for Stop: next_trip_at_stop
+  - System Alerts: alerts
   default: next_trip_at_stop
 name: WeGo Public Transit
 refresh_interval: 15
