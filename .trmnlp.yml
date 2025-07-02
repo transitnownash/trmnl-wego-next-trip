@@ -11,7 +11,7 @@ custom_fields: {
   wego_stop_id: PORGRESF,
   # wego_stop_id: GXOGREEN,
   # wego_stop_id: MCC4_14,
-  # wego_display: next_trip_at_stop
+  wego_display: next_trip_at_stop
   # wego_display: alerts
 }
 

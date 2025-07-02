@@ -1,5 +1,20 @@
 <div class="view">
-  {% if trmnl.plugin_settings.custom_fields_values.wego_display == 'next_trip_at_stop' %}
+  {% if trmnl.plugin_settings.custom_fields_values.wego_display == 'alerts' %}
+    <div class="layout layout--row">
+      <div class="column"
+        data-list-limit="true"
+        data-list-max-height="210"
+        data-list-hidden-count="true"
+        data-list-max-columns="2"
+      >
+        {% for alert in alerts %}
+          {% render "alert" with alert: alert %}
+        {% else %}
+          <span class="description">No active system alerts</span>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
   <div class="layout layout--row">
     <div class="grid grid--cols-5">
       <div class="col col--span-3">
@@ -57,20 +72,5 @@
       </div>
     </div>
   </div>
-  {% else %}
-    <div class="layout layout--row">
-      <div class="column"
-        data-list-limit="true"
-        data-list-max-height="210"
-        data-list-hidden-count="true"
-        data-list-max-columns="2"
-      >
-        {% for alert in alerts %}
-          {% render "alert" with alert: alert %}
-        {% else %}
-          <span class="description">No active system alerts</span>
-        {% endfor %}
-      </div>
-    </div>
   {% endif %}
 </div>

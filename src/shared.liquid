@@ -48,6 +48,16 @@
   dayjs.extend(dayjs_plugin_timezone);
 </script>
 
+<style>
+  #wego-map-canvas {
+    border-radius: 10px;
+  }
+  .leaflet-tile-loaded {
+    opacity: 0.1;
+    filter: grayscale(1.0);
+  }
+</style>
+
 <script>
   const CURRENT_TIME = {{ trmnl.system.timestamp_utc }};
   const TIME_ZONE = '{{ trmnl.user.time_zone_iana | default: 'America/Chicago' }}';
@@ -324,8 +334,8 @@
         zoomControl: false,
         attributionControl: false
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+          attribution: '<a href="https://github.com/cyclosm/cyclosm-cartocss-style/releases" title="CyclOSM - Open Bicycle render">CyclOSM</a> | Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
           ext: 'png',
         }).addTo(window.transitMap);
