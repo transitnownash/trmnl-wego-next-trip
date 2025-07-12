@@ -1,76 +1,74 @@
-<div class="view">
-  {% if trmnl.plugin_settings.custom_fields_values.wego_display == 'alerts' %}
-    <div class="layout layout--row">
-      <div class="column"
-        data-list-limit="true"
-        data-list-max-height="420"
-        data-list-hidden-count="true"
-        data-list-max-columns="1"
-      >
-        {% for alert in alerts %}
-          {% render "alert" with alert: alert %}
-        {% else %}
-          <span class="description">No active system alerts</span>
-        {% endfor %}
+{% if trmnl.plugin_settings.custom_fields_values.wego_display == 'alerts' %}
+  <div class="layout layout--row">
+    <div class="column"
+      data-list-limit="true"
+      data-list-max-height="420"
+      data-list-hidden-count="true"
+      data-list-max-columns="1"
+    >
+      {% for alert in alerts %}
+        {% render "alert" with alert: alert %}
+      {% else %}
+        <span class="description">No active system alerts</span>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+<div class="layout layout--row">
+  <div class="grid grid--cols-1">
+    <div class="col col--span-1">
+      <div class="item mb--2">
+        <div class="meta"></div>
+        <div class="content">
+          <span class="label label--small">Route</span>
+          <span
+            id="route-name"
+            class="value value--xxsmall"
+            data-value-fit="true">-</span>
+        </div>
+      </div>
+      <div class="item mb--2">
+        <div class="meta"></div>
+        <div class="content">
+          <span class="label label--small">Stop</span>
+          <span
+            id="stop-name"
+            class="value value--xxsmall"
+            data-value-fit="true">{{ stop.stop_name | default: 'Stop Not Found' }}</span>
+        </div>
+      </div>
+      <div class="item mb--2">
+        <div class="meta"></div>
+        <div class="content">
+          <span class="label label--small">Next Trip</span>
+          <span
+            id="trip-name"
+            class="value value--xxsmall"
+            data-value-fit="true">-</span>
+        </div>
+      </div>
+      <div class="grid grid--cols-2">
+        <div class="item col--span-1">
+          <div class="meta"></div>
+          <div class="content">
+            <span class="label label--small">Departs</span>
+            <span
+              id="departs"
+              class="value value--xsmall"
+              data-value-fit="true">-</span>
+          </div>
+        </div>
+        <div id="future" class="col--span-1"></div>
       </div>
     </div>
-  {% else %}
-  <div class="layout layout--row">
-    <div class="grid grid--cols-1">
-      <div class="col col--span-1">
-        <div class="item mb--2">
-          <div class="meta"></div>
-          <div class="content">
-            <span class="label label--small">Route</span>
-            <span
-              id="route-name"
-              class="value value--xxsmall"
-              data-value-fit="true">-</span>
-          </div>
-        </div>
-        <div class="item mb--2">
-          <div class="meta"></div>
-          <div class="content">
-            <span class="label label--small">Stop</span>
-            <span
-              id="stop-name"
-              class="value value--xxsmall"
-              data-value-fit="true">{{ stop.stop_name | default: 'Stop Not Found' }}</span>
-          </div>
-        </div>
-        <div class="item mb--2">
-          <div class="meta"></div>
-          <div class="content">
-            <span class="label label--small">Next Trip</span>
-            <span
-              id="trip-name"
-              class="value value--xxsmall"
-              data-value-fit="true">-</span>
-          </div>
-        </div>
-        <div class="grid grid--cols-2">
-          <div class="item col--span-1">
-            <div class="meta"></div>
-            <div class="content">
-              <span class="label label--small">Departs</span>
-              <span
-                id="departs"
-                class="value value--xsmall"
-                data-value-fit="true">-</span>
-            </div>
-          </div>
-          <div id="future" class="col--span-1"></div>
-        </div>
-      </div>
-      <div class="col col--span-1">
-        <div
-          id="wego-map"
-          class="wego-map"
-          style="overflow: hidden;">
-          <div id="wego-map-canvas" style="width:100%; height:250px;">Loading ...</div>
-        </div>
+    <div class="col col--span-1">
+      <div
+        id="wego-map"
+        class="wego-map"
+        style="overflow: hidden;">
+        <div id="wego-map-canvas" style="width:100%; height:250px;">Loading ...</div>
       </div>
     </div>
   </div>
-  {% endif %}
 </div>
+{% endif %}
