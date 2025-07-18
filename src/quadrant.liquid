@@ -1,18 +1,24 @@
 {% if trmnl.plugin_settings.custom_fields_values.wego_display == 'alerts' %}
-  <div class="layout layout--row">
-    <div class="column"
-      data-list-limit="true"
-      data-list-max-height="210"
-      data-list-hidden-count="true"
-      data-list-max-columns="1"
-    >
-      {% for alert in alerts %}
-        {% render "alert" with alert: alert %}
-      {% else %}
-        <span class="description">No active system alerts</span>
-      {% endfor %}
-    </div>
+<div class="layout layout--row">
+  <div class="column"
+    data-list-limit="true"
+    data-list-max-height="150"
+    data-list-hidden-count="true"
+    data-list-max-columns="1"
+  >
+    {% for alert in alerts %}
+      {% render "alert" with alert: alert %}
+    {% else %}
+      <span class="description">No active system alerts</span>
+    {% endfor %}
   </div>
+</div>
+
+<div class="title_bar">
+  <img class="image" src="data:image/svg+xml;base64,{{ bus_svg | base64_encode }}"/>
+  <span class="title">System Alerts</span>
+</div>
+
 {% else %}
 <div class="layout layout--row">
   <div class="grid grid--cols-1">
@@ -25,16 +31,6 @@
             id="route-name"
             class="value value--xxsmall"
             data-value-fit="true">-</span>
-        </div>
-      </div>
-      <div class="item mb--2">
-        <div class="meta"></div>
-        <div class="content">
-          <span class="label label--small">Stop</span>
-          <span
-            id="stop-name"
-            class="value value--xxsmall"
-            data-value-fit="true">{{ stop.stop_name | default: 'Stop Not Found' }}</span>
         </div>
       </div>
       <div class="item mb--2">
@@ -62,5 +58,9 @@
       </div>
     </div>
   </div>
+</div>
+<div class="title_bar">
+  <img class="image" src="data:image/svg+xml;base64,{{ bus_svg | base64_encode }}"/>
+  <span class="title">{{ stop.stop_name | default: 'Stop Not Found' }}</span>
 </div>
 {% endif %}
