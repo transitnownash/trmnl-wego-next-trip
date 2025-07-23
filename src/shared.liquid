@@ -58,15 +58,6 @@
   {% endif %}
 {% endfor %}
 
-{% comment %}
-  Debug information:
-  - next_trip_index: {{ next_trip_index }}
-  - next_trip found: {% if next_trip %}YES - {{ next_trip.trip_headsign }}{% else %}NO{% endif %}
-  - next_trip route_gid: {{ next_trip.route_gid | default: 'none' }}
-  - total trips count: {{ trips.size }}
-  - verify access: {% if next_trip_index != nil and trips[next_trip_index] %}trips[{{ next_trip_index }}] = {{ trips[next_trip_index].trip_headsign }}{% else %}cannot access trips[{{ next_trip_index }}]{% endif %}
-{% endcomment %}
-
 {% comment %} Format GTFS time to readable format (HH:MM:SS to h:mm AM/PM) {% endcomment %}
 {% if next_trip and next_trip.stop_times.size > 0 %}
   {% assign departure_time_str = next_trip.stop_times.first.departure_time | strip %}
@@ -174,11 +165,9 @@
         {% comment %} Find the route for this trip {% endcomment %}
         {% assign trip_route = routes | where: 'route_gid', trip.route_gid | first %}
 
-        {% if upcoming_count == 0 %}
-          {% assign upcoming_trips = upcoming_trips | append: '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
-        {% else %}
-          {% assign upcoming_trips = upcoming_trips | append: '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
-        {% endif %}
+        {% comment %} Build upcoming trips HTML using template approach {% endcomment %}
+        {% assign trip_html = '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
+        {% assign upcoming_trips = upcoming_trips | append: trip_html %}
 
         {% assign upcoming_count = upcoming_count | plus: 1 %}
       {% endif %}
@@ -283,7 +272,6 @@
 </style>
 
 <script>
-  // Only keep map-related JavaScript
   const THUNDERFOREST_API_KEY = {{ trmnl.plugin_settings.custom_fields_values.thunderforest_api_key | json }};
   const BUS_MARKER_IMAGE = 'data:image/svg+xml;base64,{{ bus_svg | base64_encode }}';
 
