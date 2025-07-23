@@ -39,6 +39,13 @@
 </svg>
 {%- endcapture %}
 
+{%- capture warning_svg %}
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="10,2 19,18 1,18" fill="white" stroke="#222" stroke-width="1.5"/>
+  <text x="10" y="15" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" fill="#222" font-weight="bold">!</text>
+</svg>
+{% endcapture %}
+
 {% template alert %}
 <div class="item gap--small" data-sort="{{ alert.alert.informed_entity.first.route_id | default: 99999 }}">
   <div class="title text--white bg--black text--center w--10 flex--center-y">
@@ -309,12 +316,9 @@
     }
     alertsList.style.display = 'block';
     alertsList.innerHTML = `
-      <div class="bg--black text--white p--2 mb--2" style="display: flex; align-items: flex-start;">
+      <div class="p--2 mb--2 border--h-1" style="display: flex; align-items: flex-start;">
         <div style="flex: 0 0 28px; display: flex; align-items: center; justify-content: center; height: 100%;">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="10,2 19,18 1,18" fill="white" stroke="#222" stroke-width="1.5"/>
-            <text x="10" y="15" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" fill="#222" font-weight="bold">!</text>
-          </svg>
+          {{ warning_svg }}
         </div>
         <div style="flex: 1 1 0; min-width: 0; margin-left: 0.75em;">
           <div class="title title--small clamp--2" style="word-break: break-word;">${foundAlert.alert.header_text?.translation?.[0]?.text || 'Service Alert'}</div>
