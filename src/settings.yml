@@ -12,6 +12,7 @@ polling_url: |
   https://gtfs.transitnownash.org/realtime/trip_updates.json
   https://gtfs.transitnownash.org/realtime/alerts.json
 polling_headers: ''
+polling_body: ''
 id: 91940
 custom_fields:
 - keyname: author_bio
@@ -34,5 +35,11 @@ custom_fields:
   - Next Trip for Stop: next_trip_at_stop
   - System Alerts: alerts
   default: next_trip_at_stop
+- keyname: thunderforest_api_key
+  field_type: password
+  name: Thunderforest API Key
+  description: Use for <a href="https://www.thunderforest.com/maps/mobile-atlas/" class="underline">nicer looking maps</a>
+  placeholder: ABCDefg1234
+  required: false
 name: WeGo Public Transit
 refresh_interval: 15
