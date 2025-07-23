@@ -11,6 +11,202 @@
 {% comment %} https://gtfs.transitnownash.org/realtime/alerts.json {% endcomment %}
 {% assign alerts = IDX_5.data %}
 
+{% assign now = 'now' | date: '%s' | plus: trmnl.user.utc_offset %}
+{% assign next_trip_index = nil %}
+{% assign next_trip = nil %}
+{% assign soonest_time_seconds = nil %}
+
+{% for trip in trips %}
+  {% if trip.stop_times.size > 0 %}
+    {% assign departure_time_str = trip.stop_times.first.departure_time | strip %}
+
+    {% comment %} Parse GTFS time format (HH:MM:SS, can be > 24:00:00) {% endcomment %}
+    {% assign time_parts = departure_time_str | split: ':' %}
+    {% assign hours = time_parts[0] | plus: 0 %}
+    {% assign minutes = time_parts[1] | plus: 0 %}
+    {% assign seconds = time_parts[2] | plus: 0 %}
+
+    {% comment %} Handle times >= 24:00:00 (next day service) {% endcomment %}
+    {% assign days_to_add = 0 %}
+    {% if hours >= 24 %}
+      {% assign days_to_add = hours | divided_by: 24 %}
+      {% assign hours = hours | modulo: 24 %}
+    {% endif %}
+
+    {% comment %} Calculate total seconds from start of day {% endcomment %}
+    {% assign hours_in_seconds = hours | times: 3600 %}
+    {% assign minutes_in_seconds = minutes | times: 60 %}
+    {% assign departure_seconds = hours_in_seconds | plus: minutes_in_seconds | plus: seconds %}
+    {% assign current_hours_in_seconds = now | date: '%H' | times: 3600 %}
+    {% assign current_minutes_in_seconds = now | date: '%M' | times: 60 %}
+    {% assign current_seconds = now | date: '%S' | plus: 0 %}
+    {% assign current_day_seconds = current_hours_in_seconds | plus: current_minutes_in_seconds | plus: current_seconds %}
+
+    {% comment %} Adjust for next day if needed {% endcomment %}
+    {% if days_to_add > 0 %}
+      {% assign departure_seconds = departure_seconds | plus: days_to_add | times: 86400 %}
+    {% endif %}
+
+    {% comment %} Only consider future departures {% endcomment %}
+    {% if departure_seconds > current_day_seconds or days_to_add > 0 %}
+      {% if soonest_time_seconds == nil or departure_seconds < soonest_time_seconds %}
+        {% assign soonest_time_seconds = departure_seconds %}
+        {% assign next_trip_index = forloop.index0 %}
+        {% assign next_trip = trip %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+{% comment %}
+  Debug information:
+  - next_trip_index: {{ next_trip_index }}
+  - next_trip found: {% if next_trip %}YES - {{ next_trip.trip_headsign }}{% else %}NO{% endif %}
+  - next_trip route_gid: {{ next_trip.route_gid | default: 'none' }}
+  - total trips count: {{ trips.size }}
+  - verify access: {% if next_trip_index != nil and trips[next_trip_index] %}trips[{{ next_trip_index }}] = {{ trips[next_trip_index].trip_headsign }}{% else %}cannot access trips[{{ next_trip_index }}]{% endif %}
+{% endcomment %}
+
+{% comment %} Format GTFS time to readable format (HH:MM:SS to h:mm AM/PM) {% endcomment %}
+{% if next_trip and next_trip.stop_times.size > 0 %}
+  {% assign departure_time_str = next_trip.stop_times.first.departure_time | strip %}
+  {% assign time_parts = departure_time_str | split: ':' %}
+  {% assign hours = time_parts[0] | plus: 0 %}
+  {% assign minutes = time_parts[1] | plus: 0 %}
+
+  {% comment %} Handle times >= 24:00:00 (next day service) {% endcomment %}
+  {% if hours >= 24 %}
+    {% assign hours = hours | modulo: 24 %}
+  {% endif %}
+
+  {% comment %} Convert to 12-hour format {% endcomment %}
+  {% assign am_pm = 'AM' %}
+  {% if hours >= 12 %}
+    {% assign am_pm = 'PM' %}
+  {% endif %}
+  {% if hours > 12 %}
+    {% assign hours = hours | minus: 12 %}
+  {% elsif hours == 0 %}
+    {% assign hours = 12 %}
+  {% endif %}
+
+  {% assign formatted_departure_time = hours | append: ':' | append: time_parts[1] | append: ' ' | append: am_pm %}
+{% endif %}
+
+{% comment %} Calculate time until departure {% endcomment %}
+{% if next_trip and next_trip.stop_times.size > 0 %}
+  {% assign departure_time_str = next_trip.stop_times.first.departure_time | strip %}
+  {% assign time_parts = departure_time_str | split: ':' %}
+  {% assign dep_hours = time_parts[0] | plus: 0 %}
+  {% assign dep_minutes = time_parts[1] | plus: 0 %}
+  {% assign dep_seconds = time_parts[2] | plus: 0 %}
+
+  {% comment %} Handle next day times {% endcomment %}
+  {% assign days_to_add = 0 %}
+  {% if dep_hours >= 24 %}
+    {% assign days_to_add = dep_hours | divided_by: 24 %}
+    {% assign dep_hours = dep_hours | modulo: 24 %}
+  {% endif %}
+
+  {% assign dep_hours_in_seconds = dep_hours | times: 3600 %}
+  {% assign dep_minutes_in_seconds = dep_minutes | times: 60 %}
+  {% assign departure_total_seconds = dep_hours_in_seconds | plus: dep_minutes_in_seconds | plus: dep_seconds %}
+  {% assign current_hours_in_seconds = now | date: '%H' | times: 3600 %}
+  {% assign current_minutes_in_seconds = now | date: '%M' | times: 60 %}
+  {% assign current_seconds = now | date: '%S' | plus: 0 %}
+  {% assign current_total_seconds = current_hours_in_seconds | plus: current_minutes_in_seconds | plus: current_seconds %}
+
+  {% if days_to_add > 0 %}
+    {% assign departure_total_seconds = departure_total_seconds | plus: days_to_add | times: 86400 %}
+  {% endif %}
+
+  {% assign seconds_until = departure_total_seconds | minus: current_total_seconds %}
+  {% assign minutes_until = seconds_until | divided_by: 60 %}
+
+  {% if minutes_until > 0 %}
+    {% assign time_until_display = minutes_until | append: ' min' %}
+  {% else %}
+    {% assign time_until_display = seconds_until | append: ' sec' %}
+  {% endif %}
+{% endif %}
+
+{% comment %} Find upcoming trips (next 2 after the current next trip) {% endcomment %}
+{% assign upcoming_trips = '' %}
+{% assign upcoming_count = 0 %}
+{% for trip in trips %}
+  {% if trip.stop_times.size > 0 and upcoming_count < 2 %}
+    {% assign trip_departure_str = trip.stop_times.first.departure_time | strip %}
+    {% assign trip_time_parts = trip_departure_str | split: ':' %}
+    {% assign trip_hours = trip_time_parts[0] | plus: 0 %}
+    {% assign trip_minutes = trip_time_parts[1] | plus: 0 %}
+    {% assign trip_seconds = trip_time_parts[2] | plus: 0 %}
+
+    {% assign trip_days_to_add = 0 %}
+    {% if trip_hours >= 24 %}
+      {% assign trip_days_to_add = trip_hours | divided_by: 24 %}
+      {% assign trip_hours = trip_hours | modulo: 24 %}
+    {% endif %}
+
+    {% assign trip_hours_in_seconds = trip_hours | times: 3600 %}
+    {% assign trip_minutes_in_seconds = trip_minutes | times: 60 %}
+    {% assign trip_total_seconds = trip_hours_in_seconds | plus: trip_minutes_in_seconds | plus: trip_seconds %}
+    {% if trip_days_to_add > 0 %}
+      {% assign trip_total_seconds = trip_total_seconds | plus: trip_days_to_add | times: 86400 %}
+    {% endif %}
+
+    {% comment %} Only include future trips that are different from next_trip {% endcomment %}
+    {% if trip_total_seconds > current_total_seconds or trip_days_to_add > 0 %}
+      {% if trip.trip_gid != next_trip.trip_gid %}
+        {% comment %} Format this trip's time {% endcomment %}
+        {% assign trip_display_hours = trip_hours %}
+        {% assign trip_am_pm = 'AM' %}
+        {% if trip_hours >= 12 %}
+          {% assign trip_am_pm = 'PM' %}
+        {% endif %}
+        {% if trip_hours > 12 %}
+          {% assign trip_display_hours = trip_hours | minus: 12 %}
+        {% elsif trip_hours == 0 %}
+          {% assign trip_display_hours = 12 %}
+        {% endif %}
+
+        {% assign trip_formatted_time = trip_display_hours | append: ':' | append: trip_time_parts[1] | append: ' ' | append: trip_am_pm %}
+
+        {% comment %} Find the route for this trip {% endcomment %}
+        {% assign trip_route = routes | where: 'route_gid', trip.route_gid | first %}
+
+        {% if upcoming_count == 0 %}
+          {% assign upcoming_trips = upcoming_trips | append: '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
+        {% else %}
+          {% assign upcoming_trips = upcoming_trips | append: '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
+        {% endif %}
+
+        {% assign upcoming_count = upcoming_count | plus: 1 %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+{% comment %} Process alerts - find first relevant alert {% endcomment %}
+{% assign relevant_alert = nil %}
+{% if next_trip %}
+  {% assign next_route = routes | where: 'route_gid', next_trip.route_gid | first %}
+  {% for alert in alerts %}
+    {% if alert.alert.informed_entity.size > 0 %}
+      {% assign alert_applies = false %}
+      {% for entity in alert.alert.informed_entity %}
+        {% if entity.route_id == next_route.route_gid or entity.stop_id == stop.stop_gid %}
+          {% assign alert_applies = true %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+      {% if alert_applies %}
+        {% assign relevant_alert = alert %}
+        {% break %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 {%- capture bus_svg %}
 <svg width="100%" height="100%" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;">
     <g transform="matrix(21.3333,0,0,21.3333,0,10.6667)">
@@ -75,13 +271,6 @@
   src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
-<script src="https://unpkg.com/dayjs@1.11.10/dayjs.min.js"></script>
-<script src="https://unpkg.com/dayjs@1.11.10/plugin/utc.js"></script>
-<script src="https://unpkg.com/dayjs@1.11.10/plugin/timezone.js"></script>
-<script>
-  dayjs.extend(dayjs_plugin_utc);
-  dayjs.extend(dayjs_plugin_timezone);
-</script>
 
 <style>
   #wego-map-canvas {
@@ -94,348 +283,99 @@
 </style>
 
 <script>
-  const CURRENT_TIME = {{ trmnl.system.timestamp_utc | json }};
-  const TIME_ZONE = {{ trmnl.user.time_zone_iana | default: 'America/Chicago' | json }};
-  const BUS_MARKER_IMAGE = 'data:image/svg+xml;base64,{{ bus_svg | base64_encode }}';
+  // Only keep map-related JavaScript
   const THUNDERFOREST_API_KEY = {{ trmnl.plugin_settings.custom_fields_values.thunderforest_api_key | json }};
+  const BUS_MARKER_IMAGE = 'data:image/svg+xml;base64,{{ bus_svg | base64_encode }}';
 
-  // https://gtfs.transitnownash.org/stops/{{ stop_id }}.json
+  // Map data
   const STOP = {{ stop | json }};
-  // https://gtfs.transitnownash.org/stops/{{ stop_id }}/trips.json?per_page=200
-  const TRIPS = {{ trips | json }};
-  // https://gtfs.transitnownash.org/routes.json
-  const ROUTES = {{ routes | json }};
-  // https://gtfs.transitnownash.org/realtime/vehicle_positions.json
   const VEHICLE_POSITIONS = {{ vehicle_positions | json }};
-  // https://gtfs.transitnownash.org/realtime/trip_updates.json
-  const TRIP_UPDATES = {{ trip_updates | json }};
-  // https://gtfs.transitnownash.org/realtime/alerts.json
-  const ALERTS = {{ alerts | json }};
 
-  // Use CURRENT_TIME as the baseline for "now" (in UTC)
-  const BASE_NOW = dayjs.unix(CURRENT_TIME).tz(TIME_ZONE);
-
-  /**
-   * Parse Time (handles HH >= 24 for GTFS, always in local stop time zone)
-   */
-  const parseTime = (timeStr) => {
-    if (!timeStr) return null;
-    const parts = timeStr.trim().split(":");
-    if (parts.length !== 3) return null;
-
-    let hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-    const seconds = parseInt(parts[2], 10);
-
-    // GTFS times can be over 24:00:00
-    const daysToAdd = Math.floor(hours / 24);
-    hours = hours % 24;
-
-    // Use BASE_NOW as the reference date in the correct time zone
-    const base = BASE_NOW.add(daysToAdd, 'day');
-    // Construct the time in the stop's local time zone
-    return dayjs.tz(
-      `${base.format('YYYY-MM-DD')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
-      TIME_ZONE
-    );
-  };
-
-  /**
-   * Find Next Departure Time
-   */
-  const findNextDepartureTime = (stopTimes) => {
-    if (!Array.isArray(stopTimes)) return null;
-    for (const st of stopTimes) {
-      const depTime = parseTime(st.departure_time);
-      if (depTime && depTime.isAfter(BASE_NOW)) {
-        return depTime;
-      }
-    }
-    return null;
-  };
-
-  /**
-   * Find Next Trip
-   */
-  const findNextTrip = (trips) => {
-    if (!Array.isArray(trips) || trips.length === 0) return null;
-    let soonestTrip = null;
-    let soonestTime = null;
-
-    for (const trip of trips) {
-      if (!trip.stop_times?.length) continue;
-      const depTime = findNextDepartureTime(trip.stop_times);
-      if (depTime && (!soonestTime || depTime < soonestTime)) {
-        soonestTrip = trip;
-        soonestTime = depTime;
-      }
-    }
-    return soonestTrip;
-  };
-
-  /**
-   * Format Time
-   */
-  const formatTime = (date) => {
-    if (!date) return '';
-    return date.tz(TIME_ZONE).format('h:mm A');
-  };
-
-  /**
-   * Get Time Until
-   */
-  const getTimeUntil = (futureDate) => {
-    if (!futureDate) return '';
-    if (!futureDate.isAfter(BASE_NOW)) return '';
-    const diffMin = futureDate.diff(BASE_NOW, 'minute');
-    const diffSec = futureDate.diff(BASE_NOW, 'second') % 60;
-    return diffMin > 0 ? `${diffMin} min` : `${diffSec} sec`;
-  };
-
-  /**
-   * Find Next Trip Update (handles GTFS-RT epoch seconds)
-   */
-  const findUpdatedNextDepartureTime = (nextTrip, stop, tripUpdates) => {
-    if (!nextTrip || !stop || !Array.isArray(tripUpdates)) return null;
-    const updatedTrip = tripUpdates.find((tu) => parseInt(tu.trip_update.trip.trip_id, 10) === parseInt(nextTrip.trip_gid, 10));
-    const updatedStopTime = updatedTrip?.trip_update.stop_time_update.find((ut) => ut.stop_id === stop.stop_gid);
-    const updateTime = updatedStopTime?.departure?.time;
-    if (!updateTime) return null;
-    return dayjs.unix(updateTime).tz(TIME_ZONE);
-  };
-
-  /**
-   * Format Delay (use ms for both, then convert to seconds)
-   */
-  const formatDelay = (scheduled, realtime) => {
-    if (!scheduled || !realtime) return 'scheduled';
-    const diffSec = realtime.unix() - scheduled.unix();
-    if (Math.abs(diffSec) < 60) return 'on time';
-    const min = Math.round(Math.abs(diffSec) / 60);
-    return diffSec > 0 ? `${min} min late` : `${min} min early`;
-  }
+  // Pre-calculated trip data from Liquid
+  const NEXT_TRIP = {{ next_trip | json }};
+  {% if next_trip %}
+    {% assign next_route = routes | where: 'route_gid', next_trip.route_gid | first %}
+    const NEXT_ROUTE = {{ next_route | json }};
+  {% else %}
+    const NEXT_ROUTE = null;
+  {% endif %}
 
   /**
    * Create Route Line
    */
   const createRouteLine = (shape, color, weight) => {
+    if (!shape || !shape.points) return null;
     const formattedShapePoints = shape.points.map((s) => {
       return [s.lat, s.lon];
-    })
-
+    });
     return L.polyline(formattedShapePoints, { smooth: true, color, weight });
-  }
-
-  /**
-   * Get Upcoming Departures for Stop (excluding current next trip)
-   * Returns array of { trip, scheduled, updated, effectiveTime }
-   * Improved: checks all stop_times for each trip, includes if either scheduled or updated is after BASE_NOW
-   */
-  const getUpcomingDeparturesForStop = (trips, stop, tripUpdates, excludeTripGid, count = 2) => {
-    const departures = [];
-    const stopGidToMatch = stop.stop_gid;
-    trips.forEach(trip => {
-      if (!Array.isArray(trip.stop_times)) return;
-      trip.stop_times.forEach(st => {
-        if (st.stop_gid != stopGidToMatch) return;
-        const scheduled = parseTime(st.departure_time);
-        const updated = findUpdatedNextDepartureTime(trip, { stop_id: st.stop_id }, tripUpdates);
-        let effectiveTime = null;
-        if (updated && scheduled) {
-          effectiveTime = updated.isAfter(scheduled) ? updated : scheduled;
-        } else if (updated) {
-          effectiveTime = updated;
-        } else if (scheduled) {
-          effectiveTime = scheduled;
-        }
-        if (
-          effectiveTime &&
-          effectiveTime.isAfter(BASE_NOW) &&
-          String(trip.trip_gid) !== String(excludeTripGid)
-        ) {
-          const route = ROUTES.find((r) => r.route_gid === trip.route_gid);
-          departures.push({ trip, route, scheduled, updated, effectiveTime });
-        }
-      });
-    });
-    departures.sort((a, b) => a.effectiveTime.unix() - b.effectiveTime.unix());
-    return departures.slice(0, count);
-  };
-
-  const formatFutureTrip = (dep) => {
-    return `<div class="label label--small py--1"><b>${formatTime(dep.updated || dep.scheduled)}</b>: ${dep.route.route_short_name} - ${dep.route.route_long_name}</div>`;
   };
 
   /**
-   * Sort alerts by data-sort attribute
+   * Initialize Map
    */
-  const sortAlertsByDataSort = () => {
-    const containers = document.querySelectorAll('.column[data-list-limit="true"]');
-    containers.forEach(container => {
-      const alertItems = Array.from(container.querySelectorAll('.item[data-sort]'));
-      if (alertItems.length <= 1) return;
-
-      // Sort by data-sort value (numeric)
-      alertItems.sort((a, b) => {
-        const sortA = parseInt(a.getAttribute('data-sort') || '99999', 10);
-        const sortB = parseInt(b.getAttribute('data-sort') || '99999', 10);
-        return sortA - sortB;
-      });
-
-      // Re-append in sorted order
-      alertItems.forEach(item => container.appendChild(item));
-    });
-  };
-
-  /**
-   * Process and Display Alerts (show only the first relevant alert)
-   */
-  const processAlerts = (alerts, routeId, stopId) => {
-    const alertsList = document.getElementById('alerts-list');
-    if (!alertsList || !Array.isArray(alerts)) return;
-
-    // Find the first relevant alert
-    const nowUnix = dayjs().unix();
-    const foundAlert = alerts.find(alert => {
-      if (!alert.alert) return false;
-      // Check if alert is active
-      const isActive = Array.isArray(alert.alert.active_period) && alert.alert.active_period.some(period => {
-        return period.start && period.start <= nowUnix && (!period.end || period.end > nowUnix);
-      });
-      if (!isActive) return false;
-      // Check if alert applies to this route or stop
-      const informed = alert.alert.informed_entity || [];
-      const appliesToRoute = informed.some(entity => entity.route_id && String(entity.route_id) === String(routeId));
-      const appliesToStop = informed.some(entity => entity.stop_id && String(entity.stop_id) === String(stopId));
-      return appliesToRoute || appliesToStop;
-    });
-
-    if (!foundAlert) {
-      alertsList.style.display = 'none';
-      return;
-    }
-    alertsList.style.display = 'block';
-    alertsList.innerHTML = `
-      <div class="p--2 mb--2 border--h-1" style="display: flex; align-items: flex-start;">
-        <div style="flex: 0 0 28px; display: flex; align-items: center; justify-content: center; height: 100%;">
-          {{ warning_svg }}
-        </div>
-        <div style="flex: 1 1 0; min-width: 0; margin-left: 0.75em;">
-          <div class="title title--small clamp--2" style="word-break: break-word;">${foundAlert.alert.header_text?.translation?.[0]?.text || 'Service Alert'}</div>
-          <div class="description clamp--2" style="word-break: break-word;">
-            ${foundAlert.alert.description_text?.translation?.[0]?.text || 'No description available'}
-          </div>
-        </div>
-      </div>
-    `;
-  };
-
-  /**
-   * Main Loop
-   */
-  document.addEventListener('DOMContentLoaded', async function () {
-    // Sort alerts by data-sort attribute
-    sortAlertsByDataSort();
-
-    const nextTripContainer = document.getElementById('trip-name');
-    const routeContainer = document.getElementById('route-name');
-    const departsContainer = document.getElementById('departs');
-    const futureContainer = document.getElementById('future');
-
-    const nextTrip = findNextTrip(TRIPS);
-    const nextRoute = ROUTES.find((r) => r.route_gid === nextTrip?.route_gid) || {};
-    if (!nextTrip) {
-      nextTripContainer.innerHTML = 'No more trips for today';
-      routeContainer.innerHTML = '';
-      departsContainer.innerHTML = '';
-      return;
-    }
-    const scheduledStopTime = findNextDepartureTime(nextTrip.stop_times);
-    const updatedStopTime = findUpdatedNextDepartureTime(nextTrip, STOP, TRIP_UPDATES);
-
-    nextTripContainer.innerHTML = nextTrip.trip_headsign || 'No more trips for today';
-    routeContainer.innerHTML = `${nextRoute.route_short_name || ''} - ${nextRoute.route_long_name || ''}`;
-
-    // Use updated time if available, otherwise fall back to scheduled time
-    const displayTime = updatedStopTime || scheduledStopTime;
-    departsContainer.innerHTML = `
-      <div>${formatTime(displayTime)}</div>
-      <div class="label label--small">In ${getTimeUntil(displayTime)}${updatedStopTime ? ` (${formatDelay(scheduledStopTime, updatedStopTime)})` : ''}</div>
-    `;
-
-    // Show next two upcoming departures after the current next trip
-    const upcoming = getUpcomingDeparturesForStop(TRIPS, STOP, TRIP_UPDATES, nextTrip.trip_gid, 2);
-    if (upcoming.length > 0 && futureContainer) {
-      futureContainer.innerHTML = `
-        <div class="item">
-          <div class="meta"></div>
-          <div class="content">
-            <div class="label label--small">Future Trips</div>
-            ${upcoming.map((dep) => formatFutureTrip(dep)).join('')}
-          </div>
-        </div>`;
-    }
-
-    // Process and display only one alert
-    processAlerts(ALERTS, nextRoute.route_gid, STOP.stop_gid);
-
+  document.addEventListener('DOMContentLoaded', function () {
     const mapContainer = document.getElementById('wego-map-canvas');
-    if (mapContainer) {
-      // Remove any previous map instance
-      if (window.transitMap && window.transitMap.remove) {
-        window.transitMap.remove();
-      }
-      window.transitMap = L.map('wego-map-canvas', {
-        center: [36.1627, -86.7816], // Nashville
-        zoom: 12,
-        zoomControl: false,
-        attributionControl: false
-      });
+    if (!mapContainer || !NEXT_TRIP) return;
 
-      // Nicer map if API key provided
-      if (THUNDERFOREST_API_KEY && !THUNDERFOREST_API_KEY?.includes('THUNDERFOREST_API_KEY')) {
-        L.tileLayer('https://{s}.tile.thunderforest.com/mobile-atlas/{z}/{x}/{y}{r}.png?apikey={apikey}', {
-            attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            apikey: THUNDERFOREST_API_KEY,
-            maxZoom: 19
-          }).addTo(window.transitMap);
-      } else {
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-	          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
-            ext: 'png',
-          }).addTo(window.transitMap);
-      }
+    // Remove any previous map instance
+    if (window.transitMap && window.transitMap.remove) {
+      window.transitMap.remove();
+    }
 
-      // Add trip route to map
-      const routeShapeOutline = createRouteLine(nextTrip.shape, `#ffffff`, 16);
-      const routeShape = createRouteLine(nextTrip.shape, `#${nextRoute.route_color}`, 8);
-      routeShapeOutline.addTo(window.transitMap);
-      routeShape.addTo(window.transitMap);
-      window.transitMap.fitBounds(routeShape.getBounds());
+    window.transitMap = L.map('wego-map-canvas', {
+      center: [36.1627, -86.7816], // Nashville
+      zoom: 12,
+      zoomControl: false,
+      attributionControl: false
+    });
 
-      // Add stop marker to map
-      L.circleMarker([parseFloat(STOP.stop_lat), parseFloat(STOP.stop_lon)], {
-          radius: 8,
-          color: '#fff',
-          weight: 3,
-          fillColor: '#000',
-          fillOpacity: 1
-      }).addTo(window.transitMap);
-
-      // Add vehicle marker to map, if found
-      const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === nextTrip.trip_gid);
-      if (vehicle) {
-        L.marker([parseFloat(vehicle.vehicle.position.latitude), parseFloat(vehicle.vehicle.position.longitude)], {
-            icon: L.icon({
-                iconUrl: BUS_MARKER_IMAGE,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10],
-            }),
-            zIndexOffset: 1000
+    // Add tile layer
+    if (THUNDERFOREST_API_KEY && !THUNDERFOREST_API_KEY?.includes('THUNDERFOREST_API_KEY')) {
+      L.tileLayer('https://{s}.tile.thunderforest.com/mobile-atlas/{z}/{x}/{y}{r}.png?apikey={apikey}', {
+          attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          apikey: THUNDERFOREST_API_KEY,
+          maxZoom: 19
         }).addTo(window.transitMap);
-      }
+    } else {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19,
+          ext: 'png',
+        }).addTo(window.transitMap);
+    }
 
+    // Add trip route to map
+    if (NEXT_TRIP.shape && NEXT_ROUTE) {
+      const routeShapeOutline = createRouteLine(NEXT_TRIP.shape, '#ffffff', 16);
+      const routeShape = createRouteLine(NEXT_TRIP.shape, `#${NEXT_ROUTE.route_color}`, 8);
+      if (routeShapeOutline) routeShapeOutline.addTo(window.transitMap);
+      if (routeShape) {
+        routeShape.addTo(window.transitMap);
+        window.transitMap.fitBounds(routeShape.getBounds());
+      }
+    }
+
+    // Add stop marker to map
+    L.circleMarker([parseFloat(STOP.stop_lat), parseFloat(STOP.stop_lon)], {
+        radius: 8,
+        color: '#fff',
+        weight: 3,
+        fillColor: '#000',
+        fillOpacity: 1
+    }).addTo(window.transitMap);
+
+    // Add vehicle marker to map, if found
+    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === NEXT_TRIP.trip_gid);
+    if (vehicle) {
+      L.marker([parseFloat(vehicle.vehicle.position.latitude), parseFloat(vehicle.vehicle.position.longitude)], {
+          icon: L.icon({
+              iconUrl: BUS_MARKER_IMAGE,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+          }),
+          zIndexOffset: 1000
+      }).addTo(window.transitMap);
     }
   });
 </script>

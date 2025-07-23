@@ -20,7 +20,10 @@ custom_fields: {
 variables:
   trmnl: {
     user: {
-      time_zone_iana: 'America/Chicago'
+      locale: "en",
+      time_zone: Central Time (US & Canada),
+      time_zone_iana: America/Chicago,
+      utc_offset: -18000
     },
     plugin_settings: {
       instance_name: 'WeGo Public Transit'

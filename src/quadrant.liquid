@@ -30,7 +30,14 @@
           <span
             id="route-name"
             class="value value--xxsmall"
-            data-value-fit="true">-</span>
+            data-value-fit="true">
+            {% if next_trip %}
+              {% assign next_route = routes | where: 'route_gid', next_trip.route_gid | first %}
+              {{ next_route.route_short_name | default: '' }}{% if next_route.route_short_name and next_route.route_long_name %} - {% endif %}{{ next_route.route_long_name | default: '' }}
+            {% else %}
+              -
+            {% endif %}
+          </span>
         </div>
       </div>
       <div class="item mb--2">
@@ -40,7 +47,13 @@
           <span
             id="trip-name"
             class="value--xxsmall"
-            data-value-fit="true">-</span>
+            data-value-fit="true">
+            {% if next_trip %}
+              {{ next_trip.trip_headsign | default: 'No destination' }}
+            {% else %}
+              No more trips for today
+            {% endif %}
+          </span>
         </div>
       </div>
       <div class="grid grid--cols-2">
@@ -51,10 +64,27 @@
             <span
               id="departs"
               class="value value--xsmall"
-              data-value-fit="true">-</span>
+              data-value-fit="true">
+              {% if next_trip and formatted_departure_time %}
+                <div>{{ formatted_departure_time }}</div>
+                <div class="label label--small">In {{ time_until_display | default: 'calculating...' }}</div>
+              {% else %}
+                -
+              {% endif %}
+            </span>
           </div>
         </div>
-        <div id="future" class="col--span-1"></div>
+        <div id="future" class="col--span-1">
+          {% if upcoming_trips != blank %}
+            <div class="item">
+              <div class="meta"></div>
+              <div class="content">
+                <div class="label label--small">Future</div>
+                {{ upcoming_trips }}
+              </div>
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
