@@ -38,7 +38,7 @@ custom_fields:
 - keyname: thunderforest_api_key
   field_type: password
   name: Thunderforest API Key
-  description: Use for <a href="https://www.thunderforest.com/maps/mobile-atlas/" class="underline">nicer looking maps</a>
+  description: Get <a href="https://www.thunderforest.com/maps/mobile-atlas/" class="underline">nicer looking maps</a> by <a href="https://www.thunderforest.com/pricing/" class="underline">obtaining an API key</a>.
   placeholder: ABCDefg1234
   required: false
 name: Nashville WeGo Public Transit
