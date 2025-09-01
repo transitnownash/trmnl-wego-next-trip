@@ -18,14 +18,14 @@ custom_fields:
 - keyname: author_bio
   name: About This Plugin
   field_type: author_bio
-  description: Displays the next bus or train for a given stop in Nashville, Tennessee. Find the code using the linked map.
+  description: Displays the next bus or train for a given stop in Nashville, Tennessee.
   github_url: https://github.com/transitnownash/trmnl-wego-next-trip
   learn_more_url: https://map.transitnownash.org/
   email_address: stephen@yearg.in
 - keyname: wego_stop_id
   field_type: string
   name: Stop ID
-  description: The code for the stop to monitor
+  description: The Stop Code for the stop to monitor, as can be found <a href="https://map.transitnownash.org/stops" class="underline">here</a>.
   placeholder: PORGRESF
 - keyname: wego_display
   field_type: select
@@ -41,5 +41,5 @@ custom_fields:
   description: Use for <a href="https://www.thunderforest.com/maps/mobile-atlas/" class="underline">nicer looking maps</a>
   placeholder: ABCDefg1234
   required: false
-name: WeGo Public Transit
+name: Nashville WeGo Public Transit
 refresh_interval: 15
