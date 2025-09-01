@@ -8,6 +8,7 @@ watch:
 
 # values of custom fields (defined in src/settings.yml)
 custom_fields: {
+  thunderforest_api_key: '{{ env.THUNDERFOREST_API_KEY }}', # Doesn't work as of 7/21/25
   wego_stop_id: PORGRESF,
   # wego_stop_id: GXOGREEN,
   # wego_stop_id: MCC4_14,
@@ -19,7 +20,10 @@ custom_fields: {
 variables:
   trmnl: {
     user: {
-      time_zone_iana: 'America/Chicago'
+      locale: "en",
+      time_zone: Central Time (US & Canada),
+      time_zone_iana: America/Chicago,
+      utc_offset: -18000
     },
     plugin_settings: {
       instance_name: 'WeGo Public Transit'
