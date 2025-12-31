@@ -1,76 +1,53 @@
-{% comment %} https://gtfs.transitnownash.org/stops/{{ stop_id }}.json {% endcomment %}
-{% assign stop = IDX_0 %}
-{% comment %} https://gtfs.transitnownash.org/stops/{{ stop_id }}/trips.json?per_page=200 {% endcomment %}
-{% assign trips = IDX_1.data %}
-{% comment %} https://gtfs.transitnownash.org/routes.json {% endcomment %}
-{% assign routes = IDX_2.data %}
-{% comment %} https://gtfs.transitnownash.org/realtime/vehicle_positions.json {% endcomment %}
-{% assign vehicle_positions = IDX_3.data %}
-{% comment %} https://gtfs.transitnownash.org/realtime/trip_updates.json {% endcomment %}
-{% assign trip_updates = IDX_4.data %}
-{% comment %} https://gtfs.transitnownash.org/realtime/alerts.json {% endcomment %}
-{% assign alerts = IDX_5.data %}
-
 {% assign now = 'now' | date: '%s' | plus: trmnl.user.utc_offset %}
-{% assign next_trip_index = nil %}
-{% assign next_trip = nil %}
+
 {% assign soonest_time_seconds = nil %}
 
-{% for trip in trips %}
-  {% if trip.stop_times.size > 0 %}
-    {% assign departure_time_str = trip.stop_times.first.departure_time | strip %}
+{% if next_trip.stop_time %}
+  {% assign departure_time_str = next_trip.stop_time.departure_time | strip %}
 
-    {% comment %} Parse GTFS time format (HH:MM:SS, can be > 24:00:00) {% endcomment %}
-    {% assign time_parts = departure_time_str | split: ':' %}
-    {% assign hours = time_parts[0] | plus: 0 %}
-    {% assign minutes = time_parts[1] | plus: 0 %}
-    {% assign seconds = time_parts[2] | plus: 0 %}
-
-    {% comment %} Handle times >= 24:00:00 (next day service) {% endcomment %}
-    {% assign days_to_add = 0 %}
-    {% if hours >= 24 %}
-      {% assign days_to_add = hours | divided_by: 24 %}
-      {% assign hours = hours | modulo: 24 %}
-    {% endif %}
-
-    {% comment %} Calculate total seconds from start of day {% endcomment %}
-    {% assign hours_in_seconds = hours | times: 3600 %}
-    {% assign minutes_in_seconds = minutes | times: 60 %}
-    {% assign departure_seconds = hours_in_seconds | plus: minutes_in_seconds | plus: seconds %}
-    {% assign current_hours_in_seconds = now | date: '%H' | times: 3600 %}
-    {% assign current_minutes_in_seconds = now | date: '%M' | times: 60 %}
-    {% assign current_seconds = now | date: '%S' | plus: 0 %}
-    {% assign current_day_seconds = current_hours_in_seconds | plus: current_minutes_in_seconds | plus: current_seconds %}
-
-    {% comment %} Adjust for next day if needed {% endcomment %}
-    {% if days_to_add > 0 %}
-      {% assign departure_seconds = departure_seconds | plus: days_to_add | times: 86400 %}
-    {% endif %}
-
-    {% comment %} Only consider future departures {% endcomment %}
-    {% if departure_seconds > current_day_seconds or days_to_add > 0 %}
-      {% if soonest_time_seconds == nil or departure_seconds < soonest_time_seconds %}
-        {% assign soonest_time_seconds = departure_seconds %}
-        {% assign next_trip_index = forloop.index0 %}
-        {% assign next_trip = trip %}
-      {% endif %}
-    {% endif %}
-  {% endif %}
-{% endfor %}
-
-{% comment %} Format GTFS time to readable format (HH:MM:SS to h:mm AM/PM) {% endcomment %}
-{% if next_trip and next_trip.stop_times.size > 0 %}
-  {% assign departure_time_str = next_trip.stop_times.first.departure_time | strip %}
+  {% comment %} Parse GTFS time format (HH:MM:SS, can be > 24:00:00) {% endcomment %}
   {% assign time_parts = departure_time_str | split: ':' %}
   {% assign hours = time_parts[0] | plus: 0 %}
   {% assign minutes = time_parts[1] | plus: 0 %}
+  {% assign seconds = time_parts[2] | plus: 0 %}
 
   {% comment %} Handle times >= 24:00:00 (next day service) {% endcomment %}
+  {% assign days_to_add = 0 %}
   {% if hours >= 24 %}
+    {% assign days_to_add = hours | divided_by: 24 %}
     {% assign hours = hours | modulo: 24 %}
   {% endif %}
 
-  {% comment %} Convert to 12-hour format {% endcomment %}
+  {% comment %} Calculate total seconds from start of day {% endcomment %}
+  {% assign hours_in_seconds = hours | times: 3600 %}
+  {% assign minutes_in_seconds = minutes | times: 60 %}
+  {% assign departure_seconds = hours_in_seconds | plus: minutes_in_seconds | plus: seconds %}
+  {% assign current_hours_in_seconds = now | date: '%H' | times: 3600 %}
+  {% assign current_minutes_in_seconds = now | date: '%M' | times: 60 %}
+  {% assign current_seconds = now | date: '%S' | plus: 0 %}
+  {% assign current_day_seconds = current_hours_in_seconds | plus: current_minutes_in_seconds | plus: current_seconds %}
+
+  {% comment %} Adjust for next day if needed {% endcomment %}
+  {% if days_to_add > 0 %}
+    {% assign departure_seconds = departure_seconds | plus: days_to_add | times: 86400 %}
+  {% endif %}
+{% endif %}
+
+
+{% comment %} Format GTFS time helper macro (HH:MM:SS to h:mm AM/PM) {% endcomment %}
+{% assign format_time_proc = 'true' %}
+
+{% comment %} Format departure times - use realtime if available, show scheduled as secondary {% endcomment %}
+{% if next_trip.stop_time %}
+  {% assign scheduled_time_str = next_trip.stop_time.departure_time | strip %}
+  {% assign realtime_time_str = next_trip.stop_time.realtime.departure | strip %}
+
+  {% comment %} Format scheduled time {% endcomment %}
+  {% assign time_parts = scheduled_time_str | split: ':' %}
+  {% assign hours = time_parts[0] | plus: 0 %}
+  {% if hours >= 24 %}
+    {% assign hours = hours | modulo: 24 %}
+  {% endif %}
   {% assign am_pm = 'AM' %}
   {% if hours >= 12 %}
     {% assign am_pm = 'PM' %}
@@ -80,110 +57,153 @@
   {% elsif hours == 0 %}
     {% assign hours = 12 %}
   {% endif %}
+  {% assign formatted_scheduled_time = hours | append: ':' | append: time_parts[1] | append: ' ' | append: am_pm %}
 
-  {% assign formatted_departure_time = hours | append: ':' | append: time_parts[1] | append: ' ' | append: am_pm %}
+  {% comment %} Check if we have realtime data and it differs from scheduled {% endcomment %}
+  {% if realtime_time_str != blank and realtime_time_str != '' %}
+    {% assign rt_parts = realtime_time_str | split: ':' %}
+    {% assign rt_hours = rt_parts[0] | plus: 0 %}
+    {% if rt_hours >= 24 %}
+      {% assign rt_hours = rt_hours | modulo: 24 %}
+    {% endif %}
+    {% assign rt_am_pm = 'AM' %}
+    {% if rt_hours >= 12 %}
+      {% assign rt_am_pm = 'PM' %}
+    {% endif %}
+    {% if rt_hours > 12 %}
+      {% assign rt_hours = rt_hours | minus: 12 %}
+    {% elsif rt_hours == 0 %}
+      {% assign rt_hours = 12 %}
+    {% endif %}
+    {% assign formatted_realtime_time = rt_hours | append: ':' | append: rt_parts[1] | append: ' ' | append: rt_am_pm %}
+
+    {% comment %} Only show scheduled time if it differs at the minute level {% endcomment %}
+    {% assign sched_hhmm = time_parts[0] | append: ':' | append: time_parts[1] %}
+    {% assign rt_hhmm = rt_parts[0] | append: ':' | append: rt_parts[1] %}
+    {% if sched_hhmm != rt_hhmm %}
+      {% assign scheduled_time_label = formatted_scheduled_time %}
+    {% else %}
+      {% assign scheduled_time_label = nil %}
+    {% endif %}
+
+    {% assign formatted_departure_time = formatted_realtime_time %}
+  {% else %}
+    {% assign formatted_departure_time = formatted_scheduled_time %}
+    {% assign scheduled_time_label = nil %}
+  {% endif %}
 {% endif %}
 
-{% comment %} Calculate time until departure {% endcomment %}
-{% if next_trip and next_trip.stop_times.size > 0 %}
-  {% assign departure_time_str = next_trip.stop_times.first.departure_time | strip %}
+{% comment %} Calculate time until departure - use realtime if available {% endcomment %}
+{% if next_trip.stop_time %}
+  {% assign departure_time_str = next_trip.stop_time.realtime.departure | default: next_trip.stop_time.departure_time | strip %}
   {% assign time_parts = departure_time_str | split: ':' %}
   {% assign dep_hours = time_parts[0] | plus: 0 %}
   {% assign dep_minutes = time_parts[1] | plus: 0 %}
   {% assign dep_seconds = time_parts[2] | plus: 0 %}
 
-  {% comment %} Handle next day times {% endcomment %}
-  {% assign days_to_add = 0 %}
+  {% comment %} Handle next day times (>= 24:00:00) {% endcomment %}
+  {% assign days_offset = 0 %}
   {% if dep_hours >= 24 %}
-    {% assign days_to_add = dep_hours | divided_by: 24 %}
+    {% assign days_offset = dep_hours | divided_by: 24 %}
     {% assign dep_hours = dep_hours | modulo: 24 %}
   {% endif %}
 
+  {% comment %} Convert departure time to seconds since midnight {% endcomment %}
   {% assign dep_hours_in_seconds = dep_hours | times: 3600 %}
   {% assign dep_minutes_in_seconds = dep_minutes | times: 60 %}
-  {% assign departure_total_seconds = dep_hours_in_seconds | plus: dep_minutes_in_seconds | plus: dep_seconds %}
-  {% assign current_hours_in_seconds = now | date: '%H' | times: 3600 %}
-  {% assign current_minutes_in_seconds = now | date: '%M' | times: 60 %}
-  {% assign current_seconds = now | date: '%S' | plus: 0 %}
-  {% assign current_total_seconds = current_hours_in_seconds | plus: current_minutes_in_seconds | plus: current_seconds %}
+  {% assign departure_seconds_today = dep_hours_in_seconds | plus: dep_minutes_in_seconds | plus: dep_seconds %}
 
-  {% if days_to_add > 0 %}
-    {% assign departure_total_seconds = departure_total_seconds | plus: days_to_add | times: 86400 %}
+  {% comment %} Get current time in UTC, then convert to local timezone {% endcomment %}
+  {% assign utc_time_str = 'now' | date: '%H:%M:%S' %}
+  {% assign utc_parts = utc_time_str | split: ':' %}
+  {% assign utc_hours = utc_parts[0] | plus: 0 %}
+  {% assign utc_minutes = utc_parts[1] | plus: 0 %}
+  {% assign utc_seconds = utc_parts[2] | plus: 0 %}
+  {% assign utc_hours_in_seconds = utc_hours | times: 3600 %}
+  {% assign utc_minutes_in_seconds = utc_minutes | times: 60 %}
+  {% assign utc_seconds_total = utc_hours_in_seconds | plus: utc_minutes_in_seconds | plus: utc_seconds %}
+
+  {% comment %} Apply timezone offset to get local time in seconds since midnight {% endcomment %}
+  {% assign current_seconds_today = utc_seconds_total | plus: trmnl.user.utc_offset %}
+  {% if current_seconds_today >= 86400 %}
+    {% assign current_seconds_today = current_seconds_today | minus: 86400 %}
+  {% elsif current_seconds_today < 0 %}
+    {% assign current_seconds_today = current_seconds_today | plus: 86400 %}
   {% endif %}
 
-  {% assign seconds_until = departure_total_seconds | minus: current_total_seconds %}
-  {% assign minutes_until = seconds_until | divided_by: 60 %}
+  {% comment %} Calculate difference in seconds {% endcomment %}
+  {% assign seconds_until = departure_seconds_today | minus: current_seconds_today %}
 
-  {% if minutes_until > 0 %}
+  {% comment %} If negative but small (less than 10 minutes ago), treat as imminent/boarding {% endcomment %}
+  {% comment %} If very negative, it's likely a next-day departure {% endcomment %}
+  {% if seconds_until < 0 %}
+    {% assign seconds_until_abs = 0 | minus: seconds_until %}
+    {% if seconds_until_abs < 600 %}
+      {% comment %} Less than 10 minutes in the past - treat as boarding/departing now {% endcomment %}
+      {% assign seconds_until = 0 %}
+    {% else %}
+      {% comment %} More than 10 minutes in the past - assume it's a next-day departure {% endcomment %}
+      {% assign seconds_until = departure_seconds_today | plus: 86400 | minus: current_seconds_today %}
+    {% endif %}
+  {% endif %}
+
+  {% comment %} If result is still > 12 hours, something is wrong - treat as imminent {% endcomment %}
+  {% if seconds_until > 43200 %}
+    {% assign seconds_until = 0 %}
+  {% endif %}
+
+  {% assign minutes_until = seconds_until | divided_by: 60 %}
+  {% if minutes_until >= 1 %}
     {% assign time_until_display = minutes_until | append: ' min' %}
-  {% else %}
+  {% elsif seconds_until > 0 %}
     {% assign time_until_display = seconds_until | append: ' sec' %}
+  {% else %}
+    {% assign time_until_display = 'Boarding' %}
   {% endif %}
 {% endif %}
 
-{% comment %} Find upcoming trips (next 2 after the current next trip) {% endcomment %}
-{% assign upcoming_trips = '' %}
-{% assign upcoming_count = 0 %}
-{% for trip in trips %}
-  {% if trip.stop_times.size > 0 and upcoming_count < 2 %}
-    {% assign trip_departure_str = trip.stop_times.first.departure_time | strip %}
-    {% assign trip_time_parts = trip_departure_str | split: ':' %}
-    {% assign trip_hours = trip_time_parts[0] | plus: 0 %}
-    {% assign trip_minutes = trip_time_parts[1] | plus: 0 %}
-    {% assign trip_seconds = trip_time_parts[2] | plus: 0 %}
-
-    {% assign trip_days_to_add = 0 %}
-    {% if trip_hours >= 24 %}
-      {% assign trip_days_to_add = trip_hours | divided_by: 24 %}
-      {% assign trip_hours = trip_hours | modulo: 24 %}
-    {% endif %}
-
-    {% assign trip_hours_in_seconds = trip_hours | times: 3600 %}
-    {% assign trip_minutes_in_seconds = trip_minutes | times: 60 %}
-    {% assign trip_total_seconds = trip_hours_in_seconds | plus: trip_minutes_in_seconds | plus: trip_seconds %}
-    {% if trip_days_to_add > 0 %}
-      {% assign trip_total_seconds = trip_total_seconds | plus: trip_days_to_add | times: 86400 %}
-    {% endif %}
-
-    {% comment %} Only include future trips that are different from next_trip {% endcomment %}
-    {% if trip_total_seconds > current_total_seconds or trip_days_to_add > 0 %}
-      {% if trip.trip_gid != next_trip.trip_gid %}
-        {% comment %} Format this trip's time {% endcomment %}
-        {% assign trip_display_hours = trip_hours %}
-        {% assign trip_am_pm = 'AM' %}
-        {% if trip_hours >= 12 %}
-          {% assign trip_am_pm = 'PM' %}
-        {% endif %}
-        {% if trip_hours > 12 %}
-          {% assign trip_display_hours = trip_hours | minus: 12 %}
-        {% elsif trip_hours == 0 %}
-          {% assign trip_display_hours = 12 %}
-        {% endif %}
-
-        {% assign trip_formatted_time = trip_display_hours | append: ':' | append: trip_time_parts[1] | append: ' ' | append: trip_am_pm %}
-
-        {% comment %} Find the route for this trip {% endcomment %}
-        {% assign trip_route = routes | where: 'route_gid', trip.route_gid | first %}
-
-        {% comment %} Build upcoming trips HTML using template approach {% endcomment %}
-        {% assign trip_html = '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
-        {% assign upcoming_trips = upcoming_trips | append: trip_html %}
-
-        {% assign upcoming_count = upcoming_count | plus: 1 %}
+{% comment %} Process upcoming trips {% endcomment %}
+{% assign upcoming_trips_html = '' %}
+{% if upcoming_trips %}
+  {% for upcoming in upcoming_trips limit: 3 %}
+    {% if upcoming.stop_time %}
+      {% assign trip_time_str = upcoming.stop_time.departure_time | strip %}
+      {% assign trip_time_parts = trip_time_str | split: ':' %}
+      {% assign trip_hours = trip_time_parts[0] | plus: 0 %}
+      {% if trip_hours >= 24 %}
+        {% assign trip_hours = trip_hours | modulo: 24 %}
       {% endif %}
+      {% assign trip_am_pm = 'AM' %}
+      {% if trip_hours >= 12 %}
+        {% assign trip_am_pm = 'PM' %}
+      {% endif %}
+      {% if trip_hours > 12 %}
+        {% assign trip_display_hours = trip_hours | minus: 12 %}
+      {% elsif trip_hours == 0 %}
+        {% assign trip_display_hours = 12 %}
+      {% else %}
+        {% assign trip_display_hours = trip_hours %}
+      {% endif %}
+
+      {% assign trip_formatted_time = trip_display_hours | append: ':' | append: trip_time_parts[1] | append: ' ' | append: trip_am_pm %}
+      {% assign trip_route = upcoming.trip.route %}
+      {% assign trip_html = '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
+      {% assign upcoming_trips_html = upcoming_trips_html | append: trip_html %}
     {% endif %}
-  {% endif %}
-{% endfor %}
+  {% endfor %}
+{% endif %}
+{% assign upcoming_trips = upcoming_trips_html %}
 
 {% comment %} Process alerts - find first relevant alert {% endcomment %}
 {% assign relevant_alert = nil %}
-{% if next_trip %}
-  {% assign next_route = routes | where: 'route_gid', next_trip.route_gid | first %}
+{% if next_trip and alerts %}
+  {% assign next_route_gid = next_trip.trip.route.route_gid %}
+  {% assign next_stop_gid = stop.stop_gid %}
   {% for alert in alerts %}
     {% if alert.alert.informed_entity.size > 0 %}
       {% assign alert_applies = false %}
       {% for entity in alert.alert.informed_entity %}
-        {% if entity.route_id == next_route.route_gid or entity.stop_id == stop.stop_gid %}
+        {% if entity.route_id == next_route_gid or entity.stop_id == next_stop_gid %}
           {% assign alert_applies = true %}
           {% break %}
         {% endif %}
@@ -334,9 +354,9 @@
     }
 
     // Add trip route to map
-    if (NEXT_TRIP.shape && NEXT_ROUTE) {
-      const routeShapeOutline = createRouteLine(NEXT_TRIP.shape, '#ffffff', 16);
-      const routeShape = createRouteLine(NEXT_TRIP.shape, `#${NEXT_ROUTE.route_color}`, 8);
+    if (NEXT_TRIP?.trip?.shape && NEXT_TRIP.trip.route) {
+      const routeShapeOutline = createRouteLine(NEXT_TRIP.trip.shape, '#ffffff', 16);
+      const routeShape = createRouteLine(NEXT_TRIP.trip.shape, `#${NEXT_TRIP.trip.route.route_color}`, 8);
       if (routeShapeOutline) routeShapeOutline.addTo(window.transitMap);
       if (routeShape) {
         routeShape.addTo(window.transitMap);
@@ -354,7 +374,7 @@
     }).addTo(window.transitMap);
 
     // Add vehicle marker to map, if found
-    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === NEXT_TRIP.trip_gid);
+    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === NEXT_TRIP?.trip?.trip_gid);
     if (vehicle) {
       L.marker([parseFloat(vehicle.vehicle.position.latitude), parseFloat(vehicle.vehicle.position.longitude)], {
           icon: L.icon({
