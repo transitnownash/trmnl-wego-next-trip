@@ -1,3 +1,11 @@
+{%
+# stop
+# next_trip
+# upcoming_trips
+# alerts
+# vehicle_positions
+%}
+
 {% assign now = 'now' | date: '%s' | plus: trmnl.user.utc_offset %}
 
 {% assign soonest_time_seconds = nil %}
@@ -374,9 +382,9 @@
     }).addTo(window.transitMap);
 
     // Add vehicle marker to map, if found
-    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.vehicle?.trip?.trip_id === NEXT_TRIP?.trip?.trip_gid);
+    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.trip?.trip_id === NEXT_TRIP?.trip?.trip_gid);
     if (vehicle) {
-      L.marker([parseFloat(vehicle.vehicle.position.latitude), parseFloat(vehicle.vehicle.position.longitude)], {
+      L.marker([parseFloat(vehicle.position.latitude), parseFloat(vehicle.position.longitude)], {
           icon: L.icon({
               iconUrl: BUS_MARKER_IMAGE,
               iconSize: [20, 20],
