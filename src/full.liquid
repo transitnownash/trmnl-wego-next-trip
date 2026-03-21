@@ -10,10 +10,10 @@
               {{ warning_svg }}
             </div>
             <div style="flex: 1 1 0; min-width: 0; margin-left: 0.75em;">
-              <div class="title title--small clamp--2" style="word-break: break-word;">
+              <div class="title title--small" data-clamp="2" data-clamp-lg="3" style="word-break: break-word;">
                 {{ relevant_alert.alert.header_text.translation.first.text | default: 'Service Alert' }}
               </div>
-              <div class="description clamp--2" style="word-break: break-word;">
+              <div class="description" data-clamp="2" data-clamp-lg="3" style="word-break: break-word;">
                 {{ relevant_alert.alert.description_text.translation.first.text | default: 'No description available' }}
               </div>
             </div>
@@ -21,13 +21,13 @@
         {% endif %}
       </div>
 
-      <div class="item mb--3">
+      <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small">Route</span>
+          <span class="label label--small lg:label--base">Route</span>
           <span
             id="route-name"
-            class="value value--small"
+            class="value value--small lg:value--base"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.route.route_short_name | default: '' }}{% if next_trip.trip.route.route_short_name and next_trip.trip.route.route_long_name %} - {% endif %}{{ next_trip.trip.route.route_long_name | default: '' }}
@@ -37,13 +37,13 @@
           </span>
         </div>
       </div>
-      <div class="item mb--3">
+      <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small">Next Trip</span>
+          <span class="label label--small lg:label--base">Next Trip</span>
           <span
             id="trip-name"
-            class="value value--small"
+            class="value value--small lg:value--base"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.trip_headsign | default: 'No destination' }}
@@ -53,17 +53,17 @@
           </span>
         </div>
       </div>
-      <div class="item mb--3">
+      <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small">Departs</span>
+          <span class="label label--small lg:label--base">Departs</span>
           <span
             id="departs"
-            class="value value--small"
+            class="value value--small lg:value--base"
             data-value-fit="true">
             {% if next_trip.trip and formatted_departure_time %}
               <div>{{ formatted_departure_time }}</div>
-              <div class="label label--small">{{ time_until_display | default: 'calculating...' }}</div>
+              <div class="label label--small lg:label--base">{{ time_until_display | default: 'calculating...' }}</div>
             {% else %}
               -
             {% endif %}
@@ -76,7 +76,7 @@
           <div class="item">
             <div class="meta"></div>
             <div class="content">
-              <div class="label label--small">Future Trips</div>
+              <div class="label label--small lg:label--base">Future Trips</div>
               {{ upcoming_trips }}
             </div>
           </div>
@@ -85,7 +85,7 @@
     </div>
     <div class="col col--span-2">
       <div id="wego-map" class="wego-map" style="overflow: hidden;">
-        <div class="h--96" id="wego-map-canvas">Loading ...</div>
+        <div class="h--96 lg:h--[650px]" id="wego-map-canvas">Loading ...</div>
       </div>
     </div>
   </div>

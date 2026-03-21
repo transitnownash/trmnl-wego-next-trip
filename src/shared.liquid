@@ -195,7 +195,7 @@
 
       {% assign trip_formatted_time = trip_display_hours | append: ':' | append: trip_time_parts[1] | append: ' ' | append: trip_am_pm %}
       {% assign trip_route = upcoming.trip.route %}
-      {% assign trip_html = '<div class="label label--small py--1"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
+      {% assign trip_html = '<div class="label label--small py--1 lg:label--base"><b>' | append: trip_formatted_time | append: '</b>: ' | append: trip_route.route_short_name | append: ' - ' | append: trip_route.route_long_name | append: '</div>' %}
       {% assign upcoming_trips_html = upcoming_trips_html | append: trip_html %}
     {% endif %}
   {% endfor %}
