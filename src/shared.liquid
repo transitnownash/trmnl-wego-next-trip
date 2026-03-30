@@ -279,18 +279,8 @@
 </div>
 {% endtemplate %}
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin="" />
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
-
 <style>
-  #wego-map-canvas {
+  .wego-map-canvas {
     border-radius: 10px;
   }
   .leaflet-tile-loaded {
@@ -300,98 +290,135 @@
 </style>
 
 <script>
-  const THUNDERFOREST_API_KEY = {{ trmnl.plugin_settings.custom_fields_values.thunderforest_api_key | json }};
-  const BUS_MARKER_IMAGE = 'data:image/svg+xml;base64,{{ bus_svg | base64_encode }}';
+  (function () {
+    const thunderforestApiKey = {{ trmnl.plugin_settings.custom_fields_values.thunderforest_api_key | json }};
+    const busMarkerImage = 'data:image/svg+xml;base64,{{ bus_svg | base64_encode }}';
 
-  // Map data
-  const STOP = {{ stop | json }};
-  const VEHICLE_POSITIONS = {{ vehicle_positions | json }};
+    // Map data
+    const stop = {{ stop | json }};
+    const vehiclePositions = {{ vehicle_positions | json }};
 
-  // Pre-calculated trip data from Liquid
-  const NEXT_TRIP = {{ next_trip | json }};
-  {% if next_trip %}
-    {% assign next_route = routes | where: 'route_gid', next_trip.route_gid | first %}
-    const NEXT_ROUTE = {{ next_route | json }};
-  {% else %}
-    const NEXT_ROUTE = null;
-  {% endif %}
+    // Pre-calculated trip data from Liquid
+    const nextTrip = {{ next_trip | json }};
 
-  /**
-   * Create Route Line
-   */
-  const createRouteLine = (shape, color, weight) => {
-    if (!shape || !shape.points) return null;
-    const formattedShapePoints = shape.points.map((s) => {
-      return [s.lat, s.lon];
-    });
-    return L.polyline(formattedShapePoints, { smooth: true, color, weight });
-  };
+    const createRouteLine = (shape, color, weight) => {
+      if (!shape || !shape.points) return null;
+      const formattedShapePoints = shape.points.map((s) => [s.lat, s.lon]);
+      return L.polyline(formattedShapePoints, { smooth: true, color, weight });
+    };
 
-  /**
-   * Initialize Map
-   */
-  document.addEventListener('DOMContentLoaded', function () {
-    const mapContainer = document.getElementById('wego-map-canvas');
-    if (!mapContainer || !NEXT_TRIP) return;
+    const addLeafletAssetsIfNeeded = (onReady) => {
+      if (window.L) {
+        onReady();
+        return;
+      }
 
-    // Remove any previous map instance
-    if (window.transitMap && window.transitMap.remove) {
-      window.transitMap.remove();
-    }
+      window.__wegoLeafletReadyQueue = window.__wegoLeafletReadyQueue || [];
+      window.__wegoLeafletReadyQueue.push(onReady);
 
-    window.transitMap = L.map('wego-map-canvas', {
-      center: [36.1627, -86.7816], // Nashville
-      zoom: 12,
-      zoomControl: false,
-      attributionControl: false
-    });
+      if (window.__wegoLeafletLoadingStarted) {
+        return;
+      }
+      window.__wegoLeafletLoadingStarted = true;
 
-    // Add tile layer
-    if (THUNDERFOREST_API_KEY && !THUNDERFOREST_API_KEY?.includes('THUNDERFOREST_API_KEY')) {
-      L.tileLayer('https://{s}.tile.thunderforest.com/mobile-atlas/{z}/{x}/{y}{r}.png?apikey={apikey}', {
+      if (!document.querySelector('link[data-wego-leaflet-css]')) {
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        css.crossOrigin = '';
+        css.setAttribute('data-wego-leaflet-css', 'true');
+        document.head.appendChild(css);
+      }
+
+      const existingJs = document.querySelector('script[data-wego-leaflet-js]');
+      if (existingJs) {
+        existingJs.addEventListener('load', () => {
+          const queue = window.__wegoLeafletReadyQueue || [];
+          window.__wegoLeafletReadyQueue = [];
+          queue.forEach((cb) => cb());
+        }, { once: true });
+        return;
+      }
+
+      const js = document.createElement('script');
+      js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      js.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      js.crossOrigin = '';
+      js.setAttribute('data-wego-leaflet-js', 'true');
+      js.addEventListener('load', () => {
+        const queue = window.__wegoLeafletReadyQueue || [];
+        window.__wegoLeafletReadyQueue = [];
+        queue.forEach((cb) => cb());
+      }, { once: true });
+      document.head.appendChild(js);
+    };
+
+    const initializeMapCard = () => {
+      const mapContainer = document.querySelector('.wego-map-canvas:not([data-wego-map-initialized])');
+      if (!mapContainer) return;
+      mapContainer.setAttribute('data-wego-map-initialized', 'true');
+
+      const map = L.map(mapContainer, {
+        center: [36.1627, -86.7816],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false
+      });
+
+      if (thunderforestApiKey && !thunderforestApiKey.includes('THUNDERFOREST_API_KEY')) {
+        L.tileLayer('https://{s}.tile.thunderforest.com/mobile-atlas/{z}/{x}/{y}{r}.png?apikey={apikey}', {
           attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          apikey: THUNDERFOREST_API_KEY,
+          apikey: thunderforestApiKey,
           maxZoom: 19
-        }).addTo(window.transitMap);
-    } else {
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        }).addTo(map);
+      } else {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
-          ext: 'png',
-        }).addTo(window.transitMap);
-    }
-
-    // Add trip route to map
-    if (NEXT_TRIP?.trip?.shape && NEXT_TRIP.trip.route) {
-      const routeShapeOutline = createRouteLine(NEXT_TRIP.trip.shape, '#ffffff', 16);
-      const routeShape = createRouteLine(NEXT_TRIP.trip.shape, `#${NEXT_TRIP.trip.route.route_color}`, 8);
-      if (routeShapeOutline) routeShapeOutline.addTo(window.transitMap);
-      if (routeShape) {
-        routeShape.addTo(window.transitMap);
-        window.transitMap.fitBounds(routeShape.getBounds());
+          ext: 'png'
+        }).addTo(map);
       }
-    }
 
-    // Add stop marker to map
-    L.circleMarker([parseFloat(STOP.stop_lat), parseFloat(STOP.stop_lon)], {
+      if (nextTrip?.trip?.shape && nextTrip.trip.route) {
+        const routeShapeOutline = createRouteLine(nextTrip.trip.shape, '#ffffff', 16);
+        const routeShape = createRouteLine(nextTrip.trip.shape, `#${nextTrip.trip.route.route_color}`, 8);
+        if (routeShapeOutline) routeShapeOutline.addTo(map);
+        if (routeShape) {
+          routeShape.addTo(map);
+          map.fitBounds(routeShape.getBounds());
+        }
+      }
+
+      L.circleMarker([parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)], {
         radius: 8,
         color: '#fff',
         weight: 3,
         fillColor: '#000',
         fillOpacity: 1
-    }).addTo(window.transitMap);
+      }).addTo(map);
 
-    // Add vehicle marker to map, if found
-    const vehicle = VEHICLE_POSITIONS.find((vp) => vp.trip?.trip_id === NEXT_TRIP?.trip?.trip_gid);
-    if (vehicle) {
-      L.marker([parseFloat(vehicle.position.latitude), parseFloat(vehicle.position.longitude)], {
+      const vehicle = vehiclePositions.find((vp) => vp.trip?.trip_id === nextTrip?.trip?.trip_gid);
+      if (vehicle) {
+        L.marker([parseFloat(vehicle.position.latitude), parseFloat(vehicle.position.longitude)], {
           icon: L.icon({
-              iconUrl: BUS_MARKER_IMAGE,
-              iconSize: [20, 20],
-              iconAnchor: [10, 10],
+            iconUrl: busMarkerImage,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
           }),
           zIndexOffset: 1000
-      }).addTo(window.transitMap);
+        }).addTo(map);
+      }
+
+      setTimeout(() => map.invalidateSize(), 0);
+    };
+
+    const bootstrap = () => addLeafletAssetsIfNeeded(initializeMapCard);
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
     }
-  });
+  })();
 </script>
