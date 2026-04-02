@@ -1,6 +1,6 @@
 <div class="layout layout--row">
-  <div class="grid grid--cols-5">
-    <div class="col col--span-3">
+  <div class="flex flex--row w--full h--full">
+    <div class="w--[50cqw]">
 
       <!-- Alerts go here -->
       <div id="alerts-list" class="richtext columns gap--none">
@@ -24,10 +24,10 @@
       <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small lg:label--base">Route</span>
+          <span class="label label--base lg:label--large">Route</span>
           <span
             id="route-name"
-            class="value value--small lg:value--base"
+            class="value value--base lg:value--large"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.route.route_short_name | default: '' }}{% if next_trip.trip.route.route_short_name and next_trip.trip.route.route_long_name %} - {% endif %}{{ next_trip.trip.route.route_long_name | default: '' }}
@@ -40,10 +40,10 @@
       <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small lg:label--base">Next Trip</span>
+          <span class="label label--base lg:label--">Next Trip</span>
           <span
             id="trip-name"
-            class="value value--small lg:value--base"
+            class="value value--base lg:value--large"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.trip_headsign | default: 'No destination' }}
@@ -56,14 +56,11 @@
       <div class="item mb--5 lg:mb--10">
         <div class="meta"></div>
         <div class="content">
-          <span class="label label--small lg:label--base">Departs</span>
-          <span
-            id="departs"
-            class="value value--small lg:value--base"
-            data-value-fit="true">
+          <span class="label label--base lg:label--large">Departs</span>
+          <span id="departs">
             {% if next_trip.trip and formatted_departure_time %}
-              <div>{{ formatted_departure_time }}</div>
-              <div class="label label--small lg:label--base">{{ time_until_display | default: 'calculating...' }}</div>
+              <div><span class="value value--base lg:value--large">{{ formatted_departure_time }}</span></div>
+              <div><span class="label label--base lg:label--large">{{ time_until_display | default: 'calculating...' }}</span></div>
             {% else %}
               -
             {% endif %}
@@ -76,16 +73,16 @@
           <div class="item">
             <div class="meta"></div>
             <div class="content">
-              <div class="label label--small lg:label--base">Future Trips</div>
+              <div class="label label--base lg:label--large">Future Trips</div>
               {{ upcoming_trips }}
             </div>
           </div>
         {% endif %}
       </div>
     </div>
-    <div class="col col--span-2">
+    <div class="w--[50cqw]">
       <div id="wego-map" class="wego-map" style="overflow: hidden;">
-        <div class="h--96 lg:h--[650px] wego-map-canvas">Loading ...</div>
+        <div class="h--[100cqh] wego-map-canvas">Loading ...</div>
       </div>
     </div>
   </div>

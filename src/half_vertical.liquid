@@ -1,13 +1,13 @@
 <div class="layout layout--row">
   <div class="grid grid--cols-1">
-    <div class="col col--span-1">
-      <div class="item mb--2">
+    <div class="col col--span-1 gap lg:gap--xlarge">
+      <div class="item">
         <div class="meta"></div>
         <div class="content">
           <span class="label label--small lg:label--base">Route</span>
           <span
             id="route-name"
-            class="value value--xxsmall lg:value--xsmall"
+            class="value value--xxsmall lg:value--small"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.route.route_short_name | default: '' }}{% if next_trip.trip.route.route_short_name and next_trip.trip.route.route_long_name %} - {% endif %}{{ next_trip.trip.route.route_long_name | default: '' }}
@@ -17,13 +17,13 @@
           </span>
         </div>
       </div>
-      <div class="item mb--2">
+      <div class="item">
         <div class="meta"></div>
         <div class="content">
           <span class="label label--small lg:label--base">Next Trip</span>
           <span
             id="trip-name"
-            class="value value--xxsmall lg:value--xsmall"
+            class="value value--xxsmall lg:value--small"
             data-value-fit="true">
             {% if next_trip %}
               {{ next_trip.trip.trip_headsign | default: 'No destination' }}
@@ -33,15 +33,14 @@
           </span>
         </div>
       </div>
-      <div class="grid grid--cols-2">
+      <div class="grid grid--cols-3">
         <div class="item col--span-1">
           <div class="meta"></div>
           <div class="content">
             <span class="label label--small lg:label--base">Departs</span>
             <span
               id="departs"
-              class="value value--xsmall lg:value--small"
-              data-value-fit="true">
+              class="value value--xsmall lg:value--small">
               {% if next_trip and formatted_departure_time %}
                 <div>{{ formatted_departure_time }}</div>
                 <div class="label label--small lg:label--base">{{ time_until_display | default: 'calculating...' }}</div>
@@ -51,7 +50,7 @@
             </span>
           </div>
         </div>
-        <div id="future" class="col--span-1">
+        <div id="future" class="col--span-2">
           {% if upcoming_trips != blank %}
             <div class="item">
               <div class="meta"></div>
@@ -63,10 +62,8 @@
           {% endif %}
         </div>
       </div>
-    </div>
-    <div class="col col--span-1">
       <div id="wego-map" class="wego-map" style="overflow: hidden;">
-        <div class="h--56 lg:h--[450px] wego-map-canvas">Loading ...</div>
+        <div class="h--[50cqh] wego-map-canvas">Loading ...</div>
       </div>
     </div>
   </div>
