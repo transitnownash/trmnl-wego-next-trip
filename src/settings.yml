@@ -4,11 +4,9 @@ no_screen_padding: 'no'
 dark_mode: 'no'
 static_data: ''
 polling_verb: get
-framework_version: 2.3.7
+framework_version: latest
 serverless_language: 
-polling_url: 'https://gtfs.transitnownash.org/stops/{{ wego_stop_id }}/next.json
-
-  '
+polling_url: 'https://gtfs.transitnownash.org/stops/{{ wego_stop_id }}/next.json'
 polling_headers: ''
 polling_body: ''
 id: 91940
