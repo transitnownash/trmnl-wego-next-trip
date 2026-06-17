@@ -1,6 +1,6 @@
 # WeGo Public Transit Next Trip
 
-[![Build and Deploy](https://github.com/transitnownash/trmnl-wego-next-trip/actions/workflows/build.yml/badge.svg)](https://github.com/transitnownash/trmnl-wego-next-trip/actions/workflows/build.yml)
+[![Build and Deploy](https://github.com/transitnownash/trmnl-wego-next-trip/actions/workflows/build.yml/badge.svg)](https://github.com/transitnownash/trmnl-wego-next-trip/actions/workflows/build.yml) [![TRMNL Recipe Connections](https://trmnl-badges.gohk.xyz/badge/connections?recipe=91940)](https://trmnl.com/recipes/91940)
 
 ![promo](assets/promo.png)
 
