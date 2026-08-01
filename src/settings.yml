@@ -31,5 +31,5 @@ custom_fields:
   placeholder: ABCDefg1234
   required: false
 name: Nashville WeGo Public Transit
-description: Next arrival times for a WeGo transit stop
+description: Next arrival for your stop
 refresh_interval: 15
