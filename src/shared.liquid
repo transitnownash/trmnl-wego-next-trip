@@ -345,6 +345,7 @@
           img.src = busMarkerImage;
           img.width = size;
           img.height = size;
+          img.style.zIndex = '2';
           new maplibregl.Marker({ element: img, anchor: 'center' })
             .setLngLat([parseFloat(vehicle.position.longitude), parseFloat(vehicle.position.latitude)])
             .addTo(map);
