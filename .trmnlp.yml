@@ -8,9 +8,8 @@ watch:
 
 # values of custom fields (defined in src/settings.yml)
 custom_fields: {
-  thunderforest_api_key: "{{ env.THUNDERFOREST_API_KEY }}",
-  wego_stop_id: HERLINWF,
-  # wego_stop_id: PORGRESF,
+  # wego_stop_id: HERLINWF,
+  wego_stop_id: PORGRESF,
   # wego_stop_id: GXOGREEN,
   # wego_stop_id: CEC15AEN
   # wego_stop_id: MCC4_14,
